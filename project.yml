@@ -1,0 +1,117 @@
+# XcodeGen spec. Run `xcodegen generate` (build.sh does it) to produce NetWidget.xcodeproj.
+# The generated .xcodeproj is not committed; this file is the source of truth.
+name: NetWidget
+options:
+  bundleIdPrefix: com.revtechdynamics
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+configFiles:
+  Debug: Config/Signing.xcconfig
+  Release: Config/Signing.xcconfig
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    ENABLE_HARDENED_RUNTIME: YES
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEAD_CODE_STRIPPING: YES
+  configs:
+    Release:
+      # Drops com.apple.security.get-task-allow (debugger attach), which notarization rejects.
+      CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+
+targets:
+  NetWidget:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+        excludes: ["Info.plist"]
+      - path: Shared
+      - path: Helper/com.revtechdynamics.netwidget.helper.plist
+        buildPhase:
+          copyFiles:
+            destination: wrapper
+            subpath: Contents/Library/LaunchDaemons
+    settings:
+      base:
+        PRODUCT_NAME: NetWidget
+        PRODUCT_BUNDLE_IDENTIFIER: com.revtechdynamics.netwidget
+        INFOPLIST_FILE: App/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Config/App.entitlements
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
+    dependencies:
+      - target: NetWidgetWidget
+      - target: NetWidgetHelper
+        embed: true
+        copy:
+          destination: executables
+    scheme:
+      testTargets: []
+
+  NetWidgetWidget:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: Widget
+        excludes: ["Info.plist"]
+      - Shared/Constants.swift
+      - Shared/Models.swift
+      - Shared/SnapshotStore.swift
+      - Shared/RequestChannel.swift
+    settings:
+      base:
+        PRODUCT_NAME: NetWidgetWidget
+        PRODUCT_BUNDLE_IDENTIFIER: com.revtechdynamics.netwidget.widget
+        INFOPLIST_FILE: Widget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Config/Widget.entitlements
+        SKIP_INSTALL: YES
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks"
+
+  NetWidgetHelper:
+    type: tool
+    platform: macOS
+    sources:
+      - path: Helper
+        excludes: ["Info.plist", "*.plist"]
+      - Shared/Constants.swift
+      - Shared/Models.swift
+      - Shared/Parsers.swift
+      - Shared/HelperProtocol.swift
+      - Shared/CodeSigning.swift
+      - Shared/ProcessRunner.swift
+    settings:
+      base:
+        PRODUCT_NAME: NetWidgetHelper
+        PRODUCT_BUNDLE_IDENTIFIER: com.revtechdynamics.netwidget.helper
+        INFOPLIST_FILE: Helper/Info.plist
+        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
+        SKIP_INSTALL: YES
+        # The helper needs no entitlements. Without this, Xcode adds com.apple.application-identifier,
+        # which on macOS is meant to come with a provisioning profile.
+        ENTITLEMENTS_REQUIRED: NO
+      configs:
+        Release:
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+
+  NetWidgetTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests
+      - Shared/Constants.swift
+      - Shared/Models.swift
+      - Shared/Parsers.swift
+      - Shared/ProcessRunner.swift
+      - Shared/SnapshotStore.swift
+      - Shared/RequestChannel.swift
+      - App/AllowedCommands.swift
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.revtechdynamics.netwidget.tests
+    scheme:
+      testTargets:
+        - NetWidgetTests

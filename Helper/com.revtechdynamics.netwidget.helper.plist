@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.revtechdynamics.netwidget.helper</string>
+	<!-- Path inside NetWidget.app; SMAppService resolves it relative to the bundle. -->
+	<key>BundleProgram</key>
+	<string>Contents/MacOS/NetWidgetHelper</string>
+	<key>MachServices</key>
+	<dict>
+		<key>com.revtechdynamics.netwidget.helper</key>
+		<true/>
+	</dict>
+	<key>AssociatedBundleIdentifiers</key>
+	<array>
+		<string>com.revtechdynamics.netwidget</string>
+	</array>
+	<!-- No StandardOutPath / StandardErrorPath: the helper writes no logs. -->
+</dict>
+</plist>

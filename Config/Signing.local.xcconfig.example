@@ -1,0 +1,6 @@
+// Copy to Config/Signing.local.xcconfig and replace YOURTEAMID (10 characters, shown in
+// developer.apple.com > Membership, or in Keychain Access on the "Developer ID Application" certificate).
+DEVELOPMENT_TEAM = YOURTEAMID
+CODE_SIGN_IDENTITY = Developer ID Application
+// Secure timestamp is required for notarization.
+OTHER_CODE_SIGN_FLAGS = --timestamp
