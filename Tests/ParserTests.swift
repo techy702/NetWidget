@@ -78,18 +78,18 @@ final class ParserTests: XCTestCase {
         XCTAssertTrue(v[1].isBusy)
     }
 
-    // Hand-written with the field names seen in `tailscale status --json` (1.104.7) on the mini.
+    // Hand-written with the field names seen in `tailscale status --json` (1.104.7).
     func testTailscaleWithExitNode() {
         let json = """
-        {"BackendState":"Running","TailscaleIPs":["100.107.6.65","fd7a:115c:a1e0::1031:642"],
-         "Self":{"HostName":"mini","TailscaleIPs":["100.107.6.65"]},
-         "Peer":{"k1":{"HostName":"v2","DNSName":"v2.example.ts.net.","TailscaleIPs":["100.115.222.113"],"ExitNode":true},
-                 "k2":{"HostName":"phone","DNSName":"phone.example.ts.net.","ExitNode":false}}}
+        {"BackendState":"Running","TailscaleIPs":["100.64.0.1","fd7a:115c:a1e0::1:1"],
+         "Self":{"HostName":"test-host","TailscaleIPs":["100.64.0.1"]},
+         "Peer":{"k1":{"HostName":"test-exit-node","DNSName":"test-exit-node.example.ts.net.","TailscaleIPs":["100.64.0.2"],"ExitNode":true},
+                 "k2":{"HostName":"test-phone","DNSName":"test-phone.example.ts.net.","ExitNode":false}}}
         """
         let t = TailscaleParser.parse(json)
         XCTAssertEqual(t?.running, true)
-        XCTAssertEqual(t?.ips.first, "100.107.6.65")
-        XCTAssertEqual(t?.exitNode, "v2")
+        XCTAssertEqual(t?.ips.first, "100.64.0.1")
+        XCTAssertEqual(t?.exitNode, "test-exit-node")
     }
 
     func testTailscaleStopped() {
