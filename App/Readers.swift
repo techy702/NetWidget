@@ -59,21 +59,38 @@ enum NetworkReader {
 }
 
 enum StatusReaders {
+    /// Detected from the network interfaces, never by running Tailscale's binary: that binary is the
+    /// Tailscale app itself, so every `status` call launched it (and the menu bar icon flickered).
+    /// Tailscale is "up" when a tunnel interface holds an address in 100.64.0.0/10.
     static func tailscale() -> TailscaleInfo {
         guard FileManager.default.isExecutableFile(atPath: NW.tailscaleBinary) else { return .notInstalled }
-        do {
-            let r = try AllowedCommand.tailscaleStatus.run()
-            // `status --json` still prints JSON when stopped, so parse before checking the status code.
-            if var info = TailscaleParser.parse(r.stdout) {
-                if info.backendState == "NeedsLogin" { info.error = "Tailscale needs you to log in." }
-                return info
-            }
-            return TailscaleInfo(installed: true, running: false, backendState: nil, ips: [], exitNode: nil,
-                                 error: firstLine(r.stderr) ?? "Tailscale did not answer (is the app running?)")
-        } catch {
-            return TailscaleInfo(installed: true, running: false, backendState: nil, ips: [], exitNode: nil,
-                                 error: error.localizedDescription)
+        let found = tunnelAddresses()
+        let running = !found.ips.isEmpty
+        // With an exit node, the default route goes through Tailscale's tunnel.
+        let primary = NetworkReader.read().primaryInterface
+        let viaTunnel = running && primary != nil && found.interfaces.contains(primary!)
+        return TailscaleInfo(installed: true, running: running, backendState: running ? "Running" : "Stopped",
+                             ips: found.ips, exitNode: viaTunnel ? NW.exitNodeName : nil, error: nil)
+    }
+
+    static func tunnelAddresses() -> (ips: [String], interfaces: Set<String>) {
+        var head: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&head) == 0, let first = head else { return ([], []) }
+        defer { freeifaddrs(head) }
+        var ips: [String] = [], names = Set<String>()
+        for ptr in sequence(first: first, next: { $0.pointee.ifa_next }) {
+            let ifa = ptr.pointee
+            let name = String(cString: ifa.ifa_name)
+            guard name.hasPrefix("utun"), let addr = ifa.ifa_addr, addr.pointee.sa_family == UInt8(AF_INET) else { continue }
+            let v4 = addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { UInt32(bigEndian: $0.pointee.sin_addr.s_addr) }
+            // 100.64.0.0/10
+            guard v4 & 0xFFC0_0000 == 0x6440_0000 else { continue }
+            var a = addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { $0.pointee.sin_addr }
+            var buf = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
+            inet_ntop(AF_INET, &a, &buf, socklen_t(buf.count))
+            ips.append(String(cString: buf)); names.insert(name)
         }
+        return (ips, names)
     }
 
     static func vpns() -> [VPNService] {
