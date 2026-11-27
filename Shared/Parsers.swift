@@ -90,7 +90,7 @@ enum TailscaleParser {
         guard let data = json.data(using: .utf8),
               let s = try? JSONDecoder().decode(Status.self, from: data) else { return nil }
         let exit = s.Peer?.values.first { $0.ExitNode == true }
-        // Prefer the first DNS label ("v2" from "v2.taile5fe8f.ts.net."), which matches what
+        // Prefer the first DNS label ("v2" from "v2.example.ts.net."), which matches what
         // `tailscale set --exit-node=` takes; fall back to the host name.
         let exitName = exit.map { peer -> String in
             if let dns = peer.DNSName, let label = dns.split(separator: ".").first { return String(label) }
